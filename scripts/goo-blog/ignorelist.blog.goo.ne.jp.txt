@@ -1,2 +1,2 @@
-# 使わない（年月が変わっても除外）
-^https://blog\.goo\.ne\.jp/gauss0jp/m/\d{6}$
+# Example: Exclude monthly archive URLs
+# ^https://blog\.goo\.ne\.jp/YOUR_BLOG_ID/m/\d{6}$

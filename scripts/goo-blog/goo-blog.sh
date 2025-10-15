@@ -5,11 +5,11 @@ set -euo pipefail
 usage() {
   cat <<EOF
 Usage: $0 -b <blog-id> -t <blog-title>
-  -b BLOG_ID      ブログの識別子 (例: gauss0jp)
-  -t BLOG_TITLE   ブログのタイトル (例: "ガウスの旅のブログ")
+  -b BLOG_ID      ブログの識別子 (例: myblog)
+  -t BLOG_TITLE   ブログのタイトル (例: "My Blog Title")
   -h              このヘルプを表示
 Example:
-  $0 -b gauss0jp -t "ガウスの旅のブログ"
+  $0 -b myblog -t "My Blog Title"
 EOF
   exit 1
 }
