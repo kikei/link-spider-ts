@@ -1,0 +1,32 @@
+{
+  "name": "link-spider-ts",
+  "version": "1.0.0",
+  "description": "A TypeScript web crawler for collecting all links from websites, with Japanese encoding support",
+  "license": "MIT",
+  "author": "",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "cheerio": "^1.0.0",
+    "encoding": "^0.1.13",
+    "iconv-lite": "^0.6.3",
+    "jschardet": "^3.1.4",
+    "jsdom": "^26.1.0",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/cheerio": "^1.0.0",
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^24.7.1",
+    "@types/yargs": "^17.0.33",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
