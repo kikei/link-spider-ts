@@ -9,6 +9,7 @@ export interface ParsedArguments {
   site: string;
   allowedPrefixes?: string[];
   ignoreFile?: string;
+  keywordsFile?: string;
   stripFragments: boolean;
   stripParams?: string[];
 }
@@ -50,6 +51,11 @@ export function parseArguments(): ParsedArguments {
     .option('ignoreFile', {
       alias: 'i',
       description: 'Path to file with ignore patterns (one per line)',
+      type: 'string',
+    })
+    .option('keywordsFile', {
+      alias: 'k',
+      description: 'Path to file with keywords for content filtering',
       type: 'string',
     })
     .option('stripFragments', {

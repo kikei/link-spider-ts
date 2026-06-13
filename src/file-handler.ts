@@ -20,7 +20,29 @@ export function createDirectory(dirName: string): string {
 }
 
 /**
- * Save links to urls.txt file.
+ * Save a sorted list of link URLs to a file in the given directory.
+ * @param params
+ * @param params.dir - Directory to save file in.
+ * @param params.fileName - Output file name.
+ * @param params.links - Links to save.
+ */
+function saveUrlsToFile({
+  dir,
+  fileName,
+  links,
+}: {
+  dir: string;
+  fileName: string;
+  links: Link[];
+}): void {
+  const filePath = path.join(dir, fileName);
+  const urls = links.flatMap(link => (link.url ? [link.url] : [])).sort();
+  fs.writeFileSync(filePath, urls.join('\n'), 'utf-8');
+  console.log(`Saved ${urls.length} links to: ${filePath}`);
+}
+
+/**
+ * Save matched links to urls.txt file.
  * @param params
  * @param params.dir - Directory to save file in.
  * @param params.links - Links to save.
@@ -32,11 +54,23 @@ export function saveLinksToFile({
   dir: string;
   links: Link[];
 }): void {
-  const filePath = path.join(dir, 'urls.txt');
-  console.log('Saving links to:', filePath);
-  const urls = links.flatMap(link => (link.url ? [link.url] : [])).sort();
-  fs.writeFileSync(filePath, urls.join('\n'), 'utf-8');
-  console.log(`Links saved to: ${filePath}`);
+  saveUrlsToFile({ dir, fileName: 'urls.txt', links });
+}
+
+/**
+ * Save unmatched (non-matching) links to unmatched.txt file.
+ * @param params
+ * @param params.dir - Directory to save file in.
+ * @param params.links - Unmatched links to save.
+ */
+export function saveUnmatchedLinksToFile({
+  dir,
+  links,
+}: {
+  dir: string;
+  links: Link[];
+}): void {
+  saveUrlsToFile({ dir, fileName: 'unmatched.txt', links });
 }
 
 /**

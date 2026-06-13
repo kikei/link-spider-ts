@@ -2,7 +2,9 @@ import fs from 'fs';
 import { CRAWL_DELAY_MS } from './constants';
 import { prepareStartUrl, normalizeLinks, type Link } from './url-processor';
 import { fetchHTML, extractLinks } from './html-fetcher';
+import { extractMainText } from './extract-main-text';
 import computeHtmlSignature from './compute-html-signature';
+import { matchKeywords } from './content-filter';
 import KeyedSet from './KeyedSet';
 
 /**
@@ -11,6 +13,8 @@ import KeyedSet from './KeyedSet';
 export interface CrawlResult {
   links: Link[];
   signature: string | null;
+  text: string;
+  fetched: boolean;
 }
 
 /**
@@ -20,9 +24,18 @@ export interface CrawlingStartParams {
   url: string;
   allowedPrefixes: string[];
   ignoreList: RegExp[];
+  keywords: string[];
   stripFragments: boolean;
   stripParams?: string[];
   logStream: fs.WriteStream;
+}
+
+/**
+ * Aggregated output of a full crawl run.
+ */
+export interface CrawlOutput {
+  linksSet: KeyedSet<Link>;
+  filteredSet: KeyedSet<Link>;
 }
 
 /**
@@ -42,21 +55,25 @@ export async function crawl({
   logStream.write(`Crawling: ${url}\n`);
   console.log(`Crawling: ${url}`);
 
-  const html = await fetchHTML({ url, logStream });
-  if (!html)
+  const result = await fetchHTML({ url, logStream });
+  if (result.kind !== 'html')
     return {
       links: [],
       signature: null,
+      text: '',
+      fetched: false,
     };
 
-  const signature = computeHtmlSignature(html);
+  // Extract main text once; reuse for signature and keyword match.
+  const text = extractMainText({ html: result.html, baseUrl: url });
+  const signature = computeHtmlSignature(text);
   const links = extractLinks({
-    html,
+    html: result.html,
     currentUrl: url,
   });
 
   console.log(`Found ${links.length} links on ${url}`);
-  return { links, signature };
+  return { links, signature, text, fetched: true };
 }
 
 /**
@@ -141,15 +158,16 @@ export function filterAndQueueLinks({
 /**
  * Start crawling from initial URL, following allowed prefixes.
  * @param params - Crawling parameters.
- * @returns Collected set of link objects.
+ * @returns Crawling result with matched and filtered links.
  */
 export async function crawlingStart(
   params: CrawlingStartParams
-): Promise<KeyedSet<Link>> {
+): Promise<CrawlOutput> {
   const {
     url,
     allowedPrefixes,
     ignoreList,
+    keywords,
     stripFragments,
     stripParams,
     logStream,
@@ -163,6 +181,7 @@ export async function crawlingStart(
 
   // Initialize collected links
   const linksSet = new KeyedSet<Link>({ keyExtractor: l => l.url });
+  const filteredSet = new KeyedSet<Link>({ keyExtractor: l => l.url });
 
   // Links to crawl
   const toVisitSet = new KeyedSet<Link>({ keyExtractor: l => l.url });
@@ -181,7 +200,12 @@ export async function crawlingStart(
     count++;
 
     visited.add(curUrl);
-    const { links: rawLinks, signature } = await crawl({
+    const {
+      links: rawLinks,
+      signature,
+      text,
+      fetched,
+    } = await crawl({
       url: curUrl,
       logStream,
     });
@@ -201,7 +225,28 @@ export async function crawlingStart(
     }
     if (signature) seenSig.add(signature);
 
-    linksSet.add(curr);
+    // Classify only pages whose response was decodable HTML. Non-HTML
+    // responses and fetch errors are logged in fetchHTML and excluded
+    // from both urls.txt and unmatched.txt. Keyword matching applies
+    // only when a keywords file was provided.
+    if (fetched) {
+      if (keywords.length === 0) {
+        linksSet.add(curr);
+      } else {
+        const { matched, matchedKeywords } = matchKeywords(text, keywords);
+        if (matched) {
+          linksSet.add(curr);
+          logStream.write(`Keywords matched: ${matchedKeywords.join(', ')}\n`);
+          console.log(
+            `Keywords matched on ${curUrl}: ${matchedKeywords.join(', ')}`
+          );
+        } else {
+          filteredSet.add(curr);
+          logStream.write(`Keywords not matched\n`);
+          console.log(`Keywords not matched on ${curUrl}`);
+        }
+      }
+    }
 
     const newLinks = normalizeLinks({
       rawLinks,
@@ -220,5 +265,5 @@ export async function crawlingStart(
     await new Promise(r => setTimeout(r, CRAWL_DELAY_MS));
   }
 
-  return linksSet;
+  return { linksSet, filteredSet };
 }
